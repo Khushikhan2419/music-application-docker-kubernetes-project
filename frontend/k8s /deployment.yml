@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: music-frontend
+  labels:
+    app: amazon-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: amazon-frontend
+  template:
+    metadata:
+      labels:
+        app: amazon-frontend
+    spec:
+      containers:
+        - name: amazon-frontend
+          image: <your-ecr-repo>/amazon-frontend:latest  # 🔁 Replace this
+          ports:
+            - containerPort: 80
