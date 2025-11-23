@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: music-frontend-service
+spec:
+  selector:
+    app: music-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: LoadBalancer   # 👈 This creates a cloud Load Balancer (AWS ELB/ALB)
