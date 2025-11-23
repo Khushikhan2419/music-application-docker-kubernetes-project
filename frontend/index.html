@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>YouTube Music</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Nunito:wght@500&family=Outfit:wght@100..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        <link rel="icon" href="./assests/icon-logo.png"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="style.css">
+        <style>
+            html, body {
+                height: 100%;
+            }
+            html {
+                min-height: 100%;
+                scroll-behavior: smooth;
+            }
+            body {
+                min-height: 100vh;
+                height: 100%;
+                width: 100vw;
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                overflow-y: auto !important;
+            }
+            .main {
+                min-height: 100vh;
+                height: 100%;
+                display: flex;
+            }
+            .songs-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1.5rem;
+            }
+            .song-card {
+                background: #232323;
+                border-radius: 1rem;
+                box-shadow: 0 2px 10px 0 rgba(0,0,0,0.09);
+                color: #fff;
+                font-family: 'Montserrat', 'Roboto', sans-serif;
+                padding: 1.25rem;
+                min-width: 200px;
+                max-width: 220px;
+                width: 100%;
+                cursor: pointer;
+                transition: background 0.18s, box-shadow 0.22s;
+                margin-bottom: 0.5rem;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                box-sizing: border-box;
+            }
+            .song-card.dynamic-height {
+                /* Remove fixed/min heights to allow dynamic script to set height */
+                min-height: unset;
+                height: auto;
+            }
+            .song-card:hover {
+                background: #303030;
+                box-shadow: 0 4px 24px 2px rgba(0,0,0,0.13);
+            }
+            .song-card-image {
+                width: 100%;
+                height: 160px;
+                object-fit: cover;
+                border-radius: 0.8rem;
+                background: #1b1b1b;
+                margin-bottom: 0.6rem;
+                box-shadow: 0 1px 10px 0 rgba(0,0,0,0.12);
+                display: block;
+            }
+            .song-card-title {
+                font-size: 1.14rem;
+                font-weight: 600;
+                margin-bottom: 0.55rem;
+                word-break: break-word;
+            }
+            .song-card-controls {
+                margin-top: 0.5rem;
+            }
+            .song-card-info {
+                font-size: 0.93rem;
+                color: #bbb;
+                margin-top: 0.37rem;
+            }
+            .songs-box {
+                background: #181818;
+                border-radius: 1rem;
+                box-shadow: 0 2px 16px 2px rgba(0,0,0,0.14);
+                padding: 2rem 1.5rem;
+                margin-bottom: 2rem;
+                min-height: 80px;
+            }
+            /* Start of Music Bar Styles */
+            .music-bar {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: #222;
+                color: #fff;
+                min-height: 64px;
+                height: 64px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 2rem;
+                box-shadow: 0 -1px 12px rgba(0,0,0,0.13);
+                z-index: 10000; /* Increased to be above modal */
+                transition: transform 0.2s;
+                font-family: 'Montserrat', 'Roboto', sans-serif;
+                cursor: pointer; /* Makes the entire bar clickable */
+            }
+            .music-bar .music-bar-details {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+            .music-bar .music-bar-title {
+                font-size: 1.1rem;
+                font-weight: 500;
+            }
+            .music-bar .music-bar-controls {
+                display: flex;
+                align-items: center;
+                gap: 1.25rem;
+            }
+            .music-bar .music-bar-close {
+                background: none;
+                border: none;
+                color: #fff;
+                font-size: 1.5rem;
+                margin-left: 1.25rem;
+                cursor: pointer;
+                outline: none;
+            }
+            #audioPlayer {
+                display: none; /* Keep the native player hidden, managed by JS */
+            }
+            body.has-music-bar {
+                padding-bottom: 72px; /* Add padding to keep content above the fixed bar */
+            }
+            /* End of Music Bar Styles */
+            
+            /* Start of Cover Modal Styles */
+            .cover-modal-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(20,20,20,0.95); /* Darker background for focus */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999; /* Lowered to be below the music bar */
+                animation: fadeIn 0.26s;
+            }
+            @keyframes fadeIn {
+                from {opacity: 0;}
+                to {opacity: 1;}
+            }
+            .cover-modal-image {
+                border-radius: 1.1rem;
+                max-width: 90vw;
+                max-height: 78vh;
+                box-shadow: 0 2px 44px #000d, 0 2px 4px #6667;
+                border: 2px solid #fff2;
+                background: #232323;
+                object-fit: contain;
+                cursor: pointer; /* Makes image itself clickable to close */
+            }
+            .cover-modal-overlay .cover-modal-close {
+                position: absolute;
+                top: 2.3rem;
+                right: 2.6rem;
+                background: none;
+                border: none;
+                color: #fff;
+                font-size: 2.9rem;
+                cursor: pointer;
+                opacity: 0.8;
+                z-index: 10000;
+            }
+            /* End of Cover Modal Styles */
+            
+            .upload-modal-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(20,20,20,0.85);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                animation: fadeIn 0.2s;
+            }
+            .upload-modal {
+                background: #232323;
+                color: #fff;
+                border-radius: 1.1rem;
+                padding: 2rem 2.5rem 2rem 2.5rem;
+                box-shadow: 0 2px 44px #000d, 0 2px 4px #6667;
+                border: 2px solid #fff2;
+                max-width: 95vw;
+                width: 350px;
+                position: relative;
+                font-family: 'Montserrat', 'Roboto', sans-serif;
+                text-align: left;
+            }
+            .upload-modal input[type="file"] {
+                margin-bottom: 1rem;
+                display: block;
+                width: 100%;
+            }
+            .upload-modal label {
+                font-size: 1rem;
+                margin-bottom: 4px;
+                display: block;
+                font-weight: 500;
+            }
+            .upload-modal h3 {
+                margin-top: 0;
+                margin-bottom: 1.5rem;
+                font-size: 1.2rem;
+                font-weight: 600;
+                text-align: center;
+            }
+            .upload-modal .btns {
+                margin-top: 1rem;
+                display: flex;
+                gap: 1rem;
+                justify-content: flex-end;
+            }
+            .upload-modal .btn {
+                border: none;
+                outline: none;
+                border-radius: 6px;
+                background: #f22d53;
+                color: #fff;
+                padding: 0.7rem 1.3rem;
+                font-size: 1rem;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .upload-modal .btn.cancel {
+                background: #bbb;
+                color: #232323;
+            }
+        </style>
+    </head>
+    <body>
+
+            <div class="sticky-navbar">
+                <div class="sidebar-logo">
+                    <img src="https://logodix.com/logo/1146025.png" alt="menu" style="height: 1.5rem; width: 1.5rem; margin-left: 1.5rem; cursor: pointer;">
+                    <img src="https://music.youtube.com/img/on_platform_logo_dark.svg" alt="logo" style="width: 4.5rem; height: 1.5rem; margin-left: 1.25rem; cursor: pointer;">
+                </div>
+                
+                <div class="navbar-search-option">
+                    <div class="search-box">
+                        <img class="search-icon" src="https://purepng.com/public/uploads/medium/search-icon-sl7.png" alt="search">
+                        <input class="search-area" type="text" placeholder="Search songs, albums, artists, podcasts" />
+                    </div>
+                </div>
+                <div class="navbar-options">
+                    <img class="search-icon navbar-media-btn" src="./assests/searchicon.svg" alt="search">
+                    <i class="fa-solid fa-screencast navbar-option-img" alt="screencast"></i>
+                    <img style="height: 1.25rem; width: 1.25rem;" class="navbar-option-img" src="https://icon-library.com/images/3-dot-icon/3-dot-icon-0.jpg">
+                    <button class="navbar-sign-btn">Sign in</button>
+                </div>
+            </div>
+
+        <div class="main">
+
+            <div class="media-sidebar media-sidebar-hide">
+                <div class="media-sidebar-option">
+                    <div class="option-box">
+                        <span class="yt-icon-shape style-scope yt-icon ytSpecIconShapeHost media-option-icon" style="width: 1.65rem; height: 1.65rem; display: inline-block;">
+                            <div style="width: 100%; height: 100%; display: block; fill: currentcolor;">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" focusable="false" aria-hidden="true" style="pointer-events: none; display: inherit; width: 100%; height: 100%;">
+                                    <path d="m11.485 2.143-8 4.8-2 1.2a1 1 0 001.03 1.714L3 9.567V20a2 2 0 002 2h5v-8h4v8h5a2 2 0 002-2V9.567l.485.29a1 1 0 001.03-1.714l-2-1.2-8-4.8a1 1 0 00-1.03 0Z"></path>
+                                </svg>
+                            </div>
+                        </span>
+                        <p class="media-option-text">Home</p>
+                    </div>
+                    <div class="option-box">
+                        <img class="media-option-icon" src="./assests/explore.svg" alt="Explore">
+                        <p class="media-option-text">Explore</p>
+                    </div>
+                    <div class="option-box">
+                        <img class="media-option-icon" src="./assests/library.svg" alt="Library">
+                        <p class="media-option-text">Library</p>
+                    </div>
+                </div>
+                <div style="border-top: 1px solid #292929;" class="media-sidebar-signin">
+                    <div class="option-box">
+                        <img style="width: 1.65rem; height: 1.65rem;" class="media-option-icon" src="./assests/sign-in.png">
+                        <p class="media-option-text">Sign in</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="sidebar-menu">
+                    <div class="menu-options">
+                        <div class="option">
+                            <img class="option-icon" src="./assests/home.svg" alt="Home">
+                            <p class="option-text">Home</p>
+                        </div>
+                        <div class="option">
+                            <img class="option-icon" src="./assests/explore.svg" alt="Home">
+                            <p class="option-text">Explore</p>
+                        </div>
+
+                        <div class="option">
+                            <img class="option-icon" src="./assests/library.svg" alt="Home">
+                            <p class="option-text">Library</p>
+                        </div>
+                        <hr style="border: none; height: 1px; background-color: #292929; width: 80%; margin: 1.5rem 1rem 1.5rem 1rem;">
+                    </div>
+                    <div class="sign-in-option">
+                        
+                        <div style="margin-top: 1rem; padding: 10px; border: 1px solid #333; border-radius: 8px;">
+                            <p style="font-size: 0.9em; margin: 0 0 5px 0; color: #ccc;">Upload Music:</p>
+                            <label style="font-size: 0.8em; color: #999;">Song:</label>
+                            <input type="file" id="song" accept="audio/*" style="display: block; margin-bottom: 5px;">
+                            <label style="font-size: 0.8em; color: #999;">Image (Optional):</label>
+                            <input type="file" id="image" accept="image/*" style="display: block; margin-bottom: 10px;">
+                            <button onclick="uploadSong()" style="background: #f22d53; color: #fff; padding: 0.55rem 1.25rem; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer;">Upload</button>
+                            <p id="status" style="margin-top: 10px; font-size: 0.85rem; color: #aaa;">Status: Ready</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="content-from-api" style="flex: 1; padding:2rem; overflow-y: auto; max-height: calc(100vh - 64px);">
+
+                <h2 style="margin-bottom:1rem;">Songs</h2>
+                <div class="songs-box">
+                    <div id="song-list" class="songs-grid"></div>
+                </div>
+
+                <audio id="audioPlayer" style="display:none"></audio>
+                
+            </div>
+            
+            <div id="musicBar" style="display:none"></div>
+
+            <script>
+            const API = "http://18.177.82.193:5000";   // 🔥 CHANGE THIS
+
+            let musicBarAudio = new Audio(); // Global audio object
+            // Global variables for playback management
+            let currentSongCoverUrl = null;
+            let currentSongTitle = "";
+            let songList = []; // Array to store all loaded songs
+            let currentSongIndex = -1; // Index of the currently playing song in songList
+
+            function showFullCoverModal(url, title) {
+                const modal = document.createElement('div');
+                modal.className = 'cover-modal-overlay';
+                modal.id = 'fullCoverModal';
+                modal.setAttribute('onclick', 'closeFullCoverModal()'); // Click outside/on image closes
+                modal.innerHTML = `
+                    <button class="cover-modal-close" onclick="closeFullCoverModal()">&times;</button>
+                    <img class="cover-modal-image" src="${url}" alt="${title} Cover" onclick="event.stopPropagation()"> `;
+                document.body.appendChild(modal);
+            }
+
+            function closeFullCoverModal() {
+                const modal = document.getElementById('fullCoverModal');
+                if (modal) {
+                    modal.remove();
+                }
+            }
+            // Helper function to format time
+            function formatTime(secs) {
+                if (isNaN(secs)) return "0:00";
+                let m = Math.floor(secs / 60);
+                let s = Math.floor(secs % 60);
+                return `${m}:${s < 10 ? '0' : ''}${s}`;
+            }
+
+            // Helper function to clean song titles
+            function cleanSongTitle(filename) {
+                // Remove directories, underscores, .mp3 (and other trailing extensions), and trim spaces
+                let name = filename.split('/').pop(); // remove path
+                name = name.replace(/_/g, ' '); // underscores to space
+                name = name.replace(/\.mp3$/i, ''); // remove .mp3 at the end (case insensitive)
+                name = name.replace(/\.[^.]+$/i, ''); // remove any extension left
+                name = name.trim();
+                return name;
+            }
+
+            // ---------------- UPLOAD SONG + IMAGE ----------------
+            async function uploadSong() {
+                let song = document.getElementById("song").files[0];
+                let image = document.getElementById("image").files[0];
+
+                if (!song) {
+                    alert("Please select a song");
+                    return;
+                }
+
+                let formData = new FormData();
+                formData.append("song", song);
+                if (image) formData.append("image", image);
+
+                document.getElementById("status").innerHTML = "Uploading...";
+
+                let res = await fetch(API + "/upload_song", {
+                    method: "POST",
+                    body: formData
+                });
+
+                let data = await res.json();
+                document.getElementById("status").innerHTML = data.message || data.error;
+
+                loadSongs();
+            }
+
+            // ---------------- NEW PLAYBACK NAVIGATION FUNCTIONS ----------------
+            function playSongByIndex(index) {
+                if (songList.length > 0) {
+                    // Ensure the index wraps around correctly
+                    let actualIndex = (index % songList.length + songList.length) % songList.length;
+                    playSongInBar(songList[actualIndex], actualIndex);
+                }
+            }
+
+            function playNext() {
+                playSongByIndex(currentSongIndex + 1);
+            }
+
+            function playPrevious() {
+                playSongByIndex(currentSongIndex - 1);
+            }
+
+            function toggleLoop() {
+                musicBarAudio.loop = !musicBarAudio.loop;
+                const loopBtn = document.getElementById('musicBarLoop');
+                if (loopBtn) {
+                    // Visually indicate loop status
+                    loopBtn.style.color = musicBarAudio.loop ? '#f22d53' : '#fff'; 
+                    loopBtn.title = musicBarAudio.loop ? 'Repeat: On' : 'Repeat: Off';
+                }
+            }
+            
+            // ---------------- MUSIC BAR PLAYER LOGIC ----------------
+            function updatePlayPauseIcon() {
+                const btn = document.getElementById('musicBarPlayPause');
+                if (btn) {
+                    btn.innerHTML = musicBarAudio.paused ? '<i class="fa fa-play"></i>' : '<i class="fa fa-pause"></i>';
+                }
+            }
+
+            function updateMusicBarControls() {
+                const seekBar = document.getElementById('musicBarSeek');
+                const timeSpan = document.getElementById('musicBarTime');
+                
+                if (musicBarAudio.duration && seekBar && timeSpan) {
+                    let current = musicBarAudio.currentTime;
+                    let tot = musicBarAudio.duration;
+                    seekBar.value = (current / tot) * 100;
+                    timeSpan.innerText = `${formatTime(current)} / ${formatTime(tot)}`;
+                }
+                updatePlayPauseIcon();
+            }
+
+            function setupMusicBarEvents() {
+                const playPauseBtn = document.getElementById('musicBarPlayPause');
+                const closeBtn = document.getElementById('musicBarCloseBtn');
+                const seekBar = document.getElementById('musicBarSeek');
+                const nextBtn = document.getElementById('musicBarNext');
+                const prevBtn = document.getElementById('musicBarPrevious');
+                const loopBtn = document.getElementById('musicBarLoop');
+
+                // Clear previous listeners to prevent multiple calls
+                musicBarAudio.ontimeupdate = null;
+                musicBarAudio.onloadedmetadata = null;
+                musicBarAudio.onplay = null;
+                musicBarAudio.onpause = null;
+                musicBarAudio.onended = null;
+                
+                // Add Core Player Events
+                musicBarAudio.ontimeupdate = updateMusicBarControls;
+                musicBarAudio.onloadedmetadata = updateMusicBarControls;
+                musicBarAudio.onplay = updatePlayPauseIcon;
+                musicBarAudio.onpause = updatePlayPauseIcon;
+                // Auto-play next song when current one ends (if not looping)
+                musicBarAudio.onended = () => {
+                    if (!musicBarAudio.loop) {
+                        playNext();
+                    }
+                };
+
+
+                // Setup Button Clicks
+                if (playPauseBtn) {
+                    // Re-assigning click handler to prevent duplicates
+                    playPauseBtn.onclick = null; 
+                    playPauseBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        if (musicBarAudio.paused) {
+                            musicBarAudio.play();
+                        } else {
+                            musicBarAudio.pause();
+                        }
+                    };
+                }
+
+                if (nextBtn) {
+                    nextBtn.onclick = null;
+                    nextBtn.onclick = (e) => { e.stopPropagation(); playNext(); };
+                }
+
+                if (prevBtn) {
+                    prevBtn.onclick = null;
+                    prevBtn.onclick = (e) => { e.stopPropagation(); playPrevious(); };
+                }
+                
+                if (loopBtn) {
+                    // Initialize visual state based on audio object state
+                    loopBtn.style.color = musicBarAudio.loop ? '#f22d53' : '#fff'; 
+                    loopBtn.title = musicBarAudio.loop ? 'Repeat: On' : 'Repeat: Off';
+                    loopBtn.onclick = null;
+                    loopBtn.onclick = (e) => { e.stopPropagation(); toggleLoop(); };
+                }
+                
+                if (closeBtn) {
+                    closeBtn.onclick = null;
+                    closeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        musicBarAudio.pause();
+                        document.getElementById('musicBar').style.display = "none";
+                        document.body.classList.remove('has-music-bar');
+                    };
+                }
+
+                if (seekBar) {
+                    // Remove previous listener before adding a new one
+                    seekBar.oninput = null;
+                    seekBar.oninput = (e) => {
+                        e.stopPropagation();
+                        if (musicBarAudio.duration) {
+                            musicBarAudio.currentTime = (seekBar.value / 100) * musicBarAudio.duration;
+                        }
+                    };
+                }
+            }
+
+            function playSongInBar(song, index) {
+                const songUrl = song.url;
+                const songTitleRaw = song.file;
+                const cleanedTitle = cleanSongTitle(songTitleRaw);
+                const songCover = song.image || 'https://via.placeholder.com/70';
+
+                // Store global state
+                currentSongCoverUrl = songCover;
+                currentSongTitle = cleanedTitle;
+                currentSongIndex = index;
+
+                // 1. Update Audio Source and Play
+                // Only change source if it's a new song
+                if (musicBarAudio.src !== songUrl) {
+                    musicBarAudio.src = songUrl;
+                }
+                musicBarAudio.autoplay = true;
+
+                // 2. Update Music Bar UI
+                let bar = document.getElementById('musicBar');
+                let coverImgTag = `<img src="${songCover}" alt="${cleanedTitle} Cover" style="width:40px;height:40px;object-fit:cover;border-radius:7px;">`;
+
+                // Update HTML with new buttons: Prev, Next, Loop
+                bar.innerHTML = `
+                    <div class="music-bar" id="musicBarClickable">
+                        <div class="music-bar-details">
+                            ${coverImgTag}
+                            <span class="music-bar-title">${cleanedTitle}</span>
+                        </div>
+                        <div class="music-bar-controls">
+                            <button id="musicBarPrevious" title="Previous" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;margin-right:1rem;"><i class="fa fa-backward-step"></i></button>
+
+                            <button id="musicBarPlayPause" title="Play/Pause" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;"><i class="fa fa-pause"></i></button>
+                            
+                            <button id="musicBarNext" title="Next" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;margin-left:1rem;"><i class="fa fa-forward-step"></i></button>
+
+                            <input id="musicBarSeek" type="range" min="0" max="100" value="0" style="vertical-align:middle;margin:0 1rem;width:150px;">
+                            <span id="musicBarTime" style="font-size:0.96rem;">0:00 / 0:00</span>
+                            
+                            <button id="musicBarLoop" title="Repeat: Off" style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;margin-right:0.5rem;"><i class="fa fa-repeat"></i></button>
+
+                            <button class="music-bar-close" id="musicBarCloseBtn" title="Close"><i class="fa fa-xmark"></i></button>
+                        </div>
+                    </div>
+                `;
+
+                // 3. Show Bar and Setup Events
+                bar.style.display = "block";
+                document.body.classList.add('has-music-bar');
+                
+                // Add event listener for the modal click on the bar (must be done after innerHTML update)
+                // We use event.target.closest to reliably check if the click was within the controls area
+                let musicBarClickable = document.getElementById('musicBarClickable');
+                musicBarClickable.onclick = null; // Clear old listener
+                musicBarClickable.onclick = function(e) {
+                    // Ignore clicks on control elements or within the controls container
+                    if (e.target.closest('.music-bar-controls')) return;
+                    
+                    // Only show modal if a real cover image is available (not the placeholder)
+                    if (currentSongCoverUrl && currentSongCoverUrl !== 'https://via.placeholder.com/70') {
+                        showFullCoverModal(currentSongCoverUrl, currentSongTitle);
+                    }
+                };
+                
+                setupMusicBarEvents();
+            }
+
+            // ---------------- FETCH ALL SONGS (UPDATED) ----------------
+            async function loadSongs() {
+                let res = await fetch(API + "/songs");
+                let songs = await res.json();
+                
+                // Store songs globally
+                songList = songs;
+
+                let list = document.getElementById("song-list");
+                list.innerHTML = "";
+
+                songs.forEach((song, index) => { // Use index for list storage
+                    let div = document.createElement("div");
+                    div.className = "song-card dynamic-height";
+                    
+                    let songTitleRaw = song.file;
+                    let cleanedTitle = cleanSongTitle(songTitleRaw);
+                    let imageUrl = song.image || 'https://via.placeholder.com/160';
+                    
+                    // --- Calculate minHeight based on title length ---
+                    // Assume ~32 characters per line, font-size:1.14rem
+                    // Add 22px for each full line beyond 1
+                    let charsPerLine = 32;
+                    let lines = Math.ceil(cleanedTitle.length / charsPerLine);
+                    let baseHeight = 320; // base height for one line (orig card height is about 320px with padding)
+                    let extraPerLine = 22; // px per overflow line
+
+                    let adjustedHeight = baseHeight + ((lines - 1) * extraPerLine);
+                    
+                    div.style.minHeight = adjustedHeight + "px";
+
+                    div.innerHTML = `
+                        <img class="song-card-image" src="${imageUrl}" alt="${cleanedTitle} Cover" onerror="this.onerror=null;this.src='./assests/default-music-cover.jpg';">
+                        <div style="width: 100%;">
+                            <div class="song-card-title"><b>${cleanedTitle}</b></div>
+                        </div>
+                    `;
+                    
+                    // Call the new fixed player function on click, passing the index
+                    div.addEventListener('click', () => {
+                        playSongInBar(song, index);
+                    });
+                    
+                    list.appendChild(div);
+                });
+            }
+            loadSongs();
+            </script>
+        </div>
+    </body>
+</html>
